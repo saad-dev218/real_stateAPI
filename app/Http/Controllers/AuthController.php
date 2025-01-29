@@ -24,7 +24,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return $this->sendError('Validation error', $validator->errors(), 422);
+            return $this->sendError('Validation error', $validator->errors()->toArray(), 422);
         }
 
         $input = $request->only('name', 'email', 'password');
@@ -86,7 +86,6 @@ class AuthController extends Controller
             }
 
             $request->user()->currentAccessToken()->delete();
-
             return $this->sendSuccess('Logout successful');
         } catch (\Exception $e) {
             return $this->sendError('An error occurred during logout.', ['error' => $e->getMessage()], 500);
