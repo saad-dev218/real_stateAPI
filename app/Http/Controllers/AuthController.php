@@ -47,19 +47,21 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        // Validate the request
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'password' => 'required|string',
+            'password' => 'required|string|min:8',
+            'remember' => 'nullable',
         ]);
 
         if ($validator->fails()) {
-            return $this->sendError('Validation error', $validator->errors(), 422);
+            return $this->sendError('Validation error', $validator->errors()->toArray(), 422);
         }
 
         try {
-            // Check if the credentials are valid
-            if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $credentials = ['email' => $request->email, 'password' => $request->password];
+            $remember = $request->has('remember') && $request->remember == 'on';
+
+            if (Auth::attempt($credentials, $remember)) {
                 $user = Auth::user();
                 $token = $user->createToken('MyApp')->plainTextToken;
 
@@ -74,9 +76,14 @@ class AuthController extends Controller
 
             return $this->sendError('Unauthorized', [], 401);
         } catch (\Exception $e) {
+            \Log::error('Login error: ' . $e->getMessage());
             return $this->sendError('An error occurred during login.', ['error' => $e->getMessage()], 500);
         }
     }
+
+
+
+
 
     public function logout(Request $request): JsonResponse
     {
@@ -84,7 +91,6 @@ class AuthController extends Controller
             if (!$request->user()) {
                 return $this->sendError('Unauthorized. Please login first.', [], 401);
             }
-
             $request->user()->currentAccessToken()->delete();
             return $this->sendSuccess('Logout successful');
         } catch (\Exception $e) {
